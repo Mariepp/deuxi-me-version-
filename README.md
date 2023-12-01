@@ -1,6 +1,8 @@
-# deuxi-me-version-
+# deuxi-me-version
+    
 import random
 
+difficulty =1
 carte = [
     [1, 2, 3, 4, 5, 6],
     [7, 8, 9, 10, 11, 12],
@@ -77,18 +79,16 @@ def display_map_and_char(m, d, p): # m la carte, d le dictionnaire, et p le pers
 def recup(p): # p : personnage
     global score  # Déclarer 'score' comme variable globale
 
-    m = create_items(2, dictionnaire)
+    m = create_objects(difficulty, dictionnaire)
 
     while True:
-        display_map_char_and_objects(carte, dictionnaire, p, m)
-        d = input("quel déplacement?")
+        display_map_char_and_objects2(carte, dictionnaire, p, m)
+        d = input("Où va-t-on ?")
         update_pmur(d, p, carte, dictionnaire)
-        m = update_objects(p, m)  # Mettre à jour les objets
+
 
         # Vérifier si la position actuelle du joueur correspond à un objet
-        if (p['x'], p['y']) in m:
-            m.remove((p['x'], p['y']))  # Si oui, enlever l'objet de la carte
-            score += 1  # Augmenter le score
+        m=update_objects(personnage,m)
         
         
 
@@ -136,6 +136,8 @@ def update_pmur(letter, p, m, d):
                             nouveau_x -= 1
                         elif letter == contenuright:
                             nouveau_x += 1
+                        elif letter == contenubomb:
+                            delete_all_walls(dictionnaire,personnage)
                         elif letter =="pause":
                             run()
     
@@ -258,49 +260,101 @@ def changekeys():
                             print("Bomb! :",contenubomb)
         
         
-                    
-def create_items(nbobjets, m):
-    # On utilise list() pour obtenir une liste ordonnée des clés du dictionnaire
-    keys = list(m.keys()) # keys = [1,2,3,4,5,6...,18]
-
-    # On mélange l'ordre des clés pour placer les objets de façon aléatoire
-    random.shuffle(keys) # keys = [2,5,7,3,1,17,9,...,?]
-
-    # On boucle sur les clés mélangées pour placer les objets
-    for key in keys:
-        if m[key] == " " and nbobjets > 0:
-            m[key] = "."
-            nbobjets -= 1
-
-    return m
 
 
-def display_map_char_and_objects(m, d, p, objects):
-    map_copy = [ligne[:] for ligne in m]  # Création d'une copie de la carte pour éviter les modifications
+
+def changelevel():
+    print("Set difficulty level")
+    print("1: Easy")
+    print("2: Medium")
+    print("3: HARDCORE MODE")
+    k = input()
+    if k=="1":
+        setdifficulty(1)
+    if k=="2":
+        setdifficulty(2)
+    if k=="3":
+        setdifficulty(3)
+
+
+def setdifficulty(n):
+    global difficulty
+    difficulty = n*2
+
+
+def create_objects(nb_objects, m):
+    lignes = 3
+    colonnes = 6
+    available_positions = [(y, x) for y in range(lignes) for x in range(colonnes)]  # Liste des positions disponibles sur la carte
+
+    objects_placed = set()  # Ensemble pour stocker les positions des objets placés
+
+    while nb_objects > 0 and available_positions:
+        random_index = random.randint(0, len(available_positions) - 1)
+        y, x = available_positions[random_index]  # Sélection aléatoire d'une position disponible
+
+        position = y * colonnes + x  # Calcul de la position dans la carte
+
+        if m[position + 1] == ' ':  # Vérification si la position est vide dans la carte
+            objects_placed.add((y, x))  # Ajout de la position dans les objets placés
+            nb_objects -= 1  # Réduction du nombre d'objets restants
+        available_positions.pop(random_index)  # Retrait de la position de la liste des positions disponibles
+
+    return objects_placed  # Renvoyer l'ensemble des positions des objets placés
+
+
+#def display_map_char_and_objects(m, d, p, objects):
+    #map_copy = [ligne[:] for ligne in m]  # Création d'une copie de la carte pour éviter les modifications
 
     # Placement du personnage sur la carte copiée 
-    map_copy[p['y']][p['x']] = p['char'] 
+    #map_copy[p['y']][p['x']] = p['char'] 
 
     # Ajout des objets sur la carte copiée
-    for obj_pos in objects:
-        if isinstance(obj_pos, tuple) and len(obj_pos) == 2:  # Vérification que obj_pos est bien un tuple de deux éléments (ligne, colonne)
-            ligne, colonne = obj_pos
-            if map_copy[ligne][colonne] in d and d[map_copy[ligne][colonne]] == ' ':
-                map_copy[ligne][colonne] = '.'  # '.' représente un objet sur la carte
+    #for obj_pos in objects:
+        #if isinstance(obj_pos, tuple) and len(obj_pos) == 2:  # Vérification que obj_pos est bien un tuple de deux éléments (ligne, colonne)
+            #ligne, colonne = obj_pos
+            #if map_copy[ligne][colonne] in d and d[map_copy[ligne][colonne]] == ' ':
+                #map_copy[ligne][colonne] = '.'  # '.' représente un objet sur la carte
 
     # Affichage de la carte avec le personnage et les objets positionnés
-    display_map(map_copy, d)
+    #display_map(map_copy, d)
     
 def update_objects(p, objects): #{(x,y): ".", (x,y): " ", (x,y) : "."}
-    player_pos = (p['x'], p['y'])  # Récupère la position actuelle du joueur sous forme de tuple
-
+    player_pos = (p['y'], p['x'])  # Récupère la position actuelle du joueur sous forme de tuple
+    global score
     if player_pos in objects:  # Vérifie si la position du joueur correspond à un objet
-        objects.remove(player_pos)  # Retire l'objet à la position du joueur
-
+        objects.remove(player_pos) # Retire l'objet à la position du joueur
+        score+=1
     return objects
-    
-    
 
+    
+def display_map_char_and_objects2(m,d,p, objects):  # Nouvelle fonction pour afficher les objets
+        map_with_char = [ligne[:] for ligne in m]  # Copie de la carte avec le personnage
+
+        # Placement des objets sur la carte
+        for obj in objects:
+            y, x = obj
+            map_with_char[y][x] = '.'  # Remplacer '.' pour représenter les objets
+
+        # Affichage de la carte avec le personnage et les objets
+        display_map_and_char(map_with_char, dictionnaire,p)
+
+def delete_all_walls(m, pos):
+    lignes = 3
+    colonnes = 6
+    y, x = pos['y'], pos['x']  # Récupération de la position actuelle du personnage
+
+    # Coordonnées des positions autour du personnage
+    positions_around = [
+        (y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1),
+        (y - 1, x - 1), (y - 1, x + 1), (y + 1, x - 1), (y + 1, x + 1)
+    ]
+
+    for y, x in positions_around:
+        if 0 <= y < lignes and 0 <= x < colonnes:  # Vérification des limites de la carte
+            position = y * colonnes + x + 1  # Calcul de la position dans la carte
+            if m[position] == '#':  # Vérification si la position est un mur
+                m[position] = ' '  # Remplacer le mur par un espace
     
     
                 
